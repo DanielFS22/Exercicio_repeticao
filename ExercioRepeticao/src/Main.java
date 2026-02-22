@@ -1,18 +1,26 @@
 import java.util.Scanner;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 public class Main {
 
     public static void main(String[] args) {
 
         Scanner scanner = new Scanner(System.in);
+        Random random = new Random();
 
         int qtdSenhas;
         do {
-            System.out.print("Quantas senhas deseja criar (1 a 20): ");
+            System.out.print("Quantas senhas deseja gerar (1 a 20): ");
             qtdSenhas = scanner.nextInt();
         } while (qtdSenhas < 1 || qtdSenhas > 20);
+
+        int tamanhoSenha;
+        do {
+            System.out.print("Tamanho das senhas (8 a 32): ");
+            tamanhoSenha = scanner.nextInt();
+        } while (tamanhoSenha < 8 || tamanhoSenha > 32);
 
         boolean usaMaiuscula, usaMinuscula, usaNumero, usaEspecial;
         int gruposEscolhidos;
@@ -44,35 +52,31 @@ public class Main {
 
         List<String> senhas = new ArrayList<>();
 
-        scanner.nextLine(); // limpar buffer
-
-        for (int i = 1; i <= qtdSenhas; i++) {
+        for (int i = 0; i < qtdSenhas; i++) {
 
             String senha;
-            boolean senhaValida;
 
             do {
-                System.out.print("Digite a senha " + i + ": ");
-                senha = scanner.nextLine();
-
-                senhaValida = validaSenha(
-                        senha,
+                senha = gerarSenha(
+                        tamanhoSenha,
                         usaMaiuscula,
                         usaMinuscula,
                         usaNumero,
-                        usaEspecial
+                        usaEspecial,
+                        random
                 );
-
-                if (!senhaValida) {
-                    System.out.println("Senha inválida. Tente novamente.");
-                }
-
-            } while (!senhaValida);
+            } while (!validaSenha(
+                    senha,
+                    usaMaiuscula,
+                    usaMinuscula,
+                    usaNumero,
+                    usaEspecial
+            ));
 
             senhas.add(senha);
         }
 
-        System.out.println("\nSenhas cadastradas:");
+        System.out.println("\nSenhas geradas:");
         for (String s : senhas) {
             exibirContagem(s);
         }
@@ -80,14 +84,51 @@ public class Main {
         scanner.close();
     }
 
+    static String gerarSenha(int tamanho,
+                             boolean usaMaiuscula,
+                             boolean usaMinuscula,
+                             boolean usaNumero,
+                             boolean usaEspecial,
+                             Random random) {
+
+        String maiusculas = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        String minusculas = "abcdefghijklmnopqrstuvwxyz";
+        String numeros = "0123456789";
+        String especiais = "!@#$%¨&*()";
+
+        String permitidos = "";
+
+        if (usaMaiuscula) permitidos += maiusculas;
+        if (usaMinuscula) permitidos += minusculas;
+        if (usaNumero) permitidos += numeros;
+        if (usaEspecial) permitidos += especiais;
+
+        StringBuilder senha = new StringBuilder();
+
+        // garantir pelo menos um caractere de cada grupo obrigatório
+        if (usaMaiuscula) senha.append(maiusculas.charAt(random.nextInt(maiusculas.length())));
+        if (usaMinuscula) senha.append(minusculas.charAt(random.nextInt(minusculas.length())));
+        if (usaNumero) senha.append(numeros.charAt(random.nextInt(numeros.length())));
+        if (usaEspecial) senha.append(especiais.charAt(random.nextInt(especiais.length())));
+
+        // completar o restante da senha
+        while (senha.length() < tamanho) {
+            senha.append(permitidos.charAt(random.nextInt(permitidos.length())));
+        }
+
+        // embaralhar caracteres
+        return senha.chars()
+                .mapToObj(c -> (char) c)
+                .sorted((a, b) -> random.nextInt(3) - 1)
+                .collect(StringBuilder::new, StringBuilder::append, StringBuilder::append)
+                .toString();
+    }
+
     static boolean validaSenha(String senha,
                                boolean usaMaiuscula,
                                boolean usaMinuscula,
                                boolean usaNumero,
                                boolean usaEspecial) {
-
-        // tamanho da senha
-        if (senha.length() < 8 || senha.length() > 32) return false;
 
         boolean temMaiuscula = false;
         boolean temMinuscula = false;
@@ -98,15 +139,10 @@ public class Main {
             char c = senha.charAt(i);
 
             // classificacao do caractere
-            if (Character.isUpperCase(c)) {
-                temMaiuscula = true;
-            } else if (Character.isLowerCase(c)) {
-                temMinuscula = true;
-            } else if (Character.isDigit(c)) {
-                temNumero = true;
-            } else {
-                temEspecial = true;
-            }
+            if (Character.isUpperCase(c)) temMaiuscula = true;
+            else if (Character.isLowerCase(c)) temMinuscula = true;
+            else if (Character.isDigit(c)) temNumero = true;
+            else temEspecial = true;
 
             // repeticao de 3 caracteres iguais
             if (i >= 2 &&
@@ -132,7 +168,6 @@ public class Main {
             }
         }
 
-        // verificacao dos grupos obrigatorios
         if (usaMaiuscula && !temMaiuscula) return false;
         if (usaMinuscula && !temMinuscula) return false;
         if (usaNumero && !temNumero) return false;
@@ -148,7 +183,6 @@ public class Main {
         for (int i = 0; i < senha.length(); i++) {
             char c = senha.charAt(i);
 
-            // contagem dos caracteres
             if (Character.isUpperCase(c)) maiuscula++;
             else if (Character.isLowerCase(c)) minuscula++;
             else if (Character.isDigit(c)) numero++;
